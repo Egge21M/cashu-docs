@@ -286,11 +286,9 @@
 </li>
 </ol>
 <p>Most of the complexity (especially around the cryptography involved) is hidden by Cashu libraries. Down below you can find some examples written using most common libraries.</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:1"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Cashu-TS</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">TS</label><label for="__tabbed_1_2">Rust</label></div>
 <div class="tabbed-content">
-<div class="tabbed-block"></div>
-</div>
-</div>
+<div class="tabbed-block">
 <div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">CashuMint</span><span class="p">,</span><span class="w"> </span><span class="nx">CashuWallet</span><span class="p">,</span><span class="w"> </span><span class="nx">MintQuoteState</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">&quot;@cashu/cashu-ts&quot;</span><span class="p">;</span>
 <span class="kd">const</span><span class="w"> </span><span class="nx">mintUrl</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;http://localhost:3338&quot;</span><span class="p">;</span>
 <span class="kd">const</span><span class="w"> </span><span class="nx">mint</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">CashuMint</span><span class="p">(</span><span class="nx">mintUrl</span><span class="p">);</span>
@@ -304,6 +302,59 @@
 <span class="w">  </span><span class="p">}</span>
 <span class="p">},</span><span class="w"> </span><span class="mf">10000</span><span class="p">);</span>
 </code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="k">use</span><span class="w"> </span><span class="n">std</span><span class="p">::</span><span class="n">sync</span><span class="p">::</span><span class="n">Arc</span><span class="p">;</span>
+<span class="k">use</span><span class="w"> </span><span class="n">std</span><span class="p">::</span><span class="n">time</span><span class="p">::</span><span class="n">Duration</span><span class="p">;</span>
+
+<span class="k">use</span><span class="w"> </span><span class="n">cdk</span><span class="p">::</span><span class="n">amount</span><span class="p">::</span><span class="n">SplitTarget</span><span class="p">;</span>
+<span class="k">use</span><span class="w"> </span><span class="n">cdk</span><span class="p">::</span><span class="n">cdk_database</span><span class="p">::</span><span class="n">WalletMemoryDatabase</span><span class="p">;</span>
+<span class="k">use</span><span class="w"> </span><span class="n">cdk</span><span class="p">::</span><span class="n">nuts</span><span class="p">::{</span><span class="n">CurrencyUnit</span><span class="p">,</span><span class="w"> </span><span class="n">MintQuoteState</span><span class="p">};</span>
+<span class="k">use</span><span class="w"> </span><span class="n">cdk</span><span class="p">::</span><span class="n">wallet</span><span class="p">::</span><span class="n">Wallet</span><span class="p">;</span>
+<span class="k">use</span><span class="w"> </span><span class="n">cdk</span><span class="p">::</span><span class="n">Amount</span><span class="p">;</span>
+<span class="k">use</span><span class="w"> </span><span class="n">rand</span><span class="p">::</span><span class="n">Rng</span><span class="p">;</span>
+<span class="k">use</span><span class="w"> </span><span class="n">tokio</span><span class="p">::</span><span class="n">time</span><span class="p">::</span><span class="n">sleep</span><span class="p">;</span>
+
+<span class="cp">#[tokio::main]</span>
+<span class="k">async</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">seed</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">rand</span><span class="p">::</span><span class="n">thread_rng</span><span class="p">().</span><span class="n">gen</span><span class="p">::</span><span class="o">&lt;</span><span class="p">[</span><span class="kt">u8</span><span class="p">;</span><span class="w"> </span><span class="mi">32</span><span class="p">]</span><span class="o">&gt;</span><span class="p">();</span>
+
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">mint_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;https://testnut.cashu.space&quot;</span><span class="p">;</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">unit</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">CurrencyUnit</span><span class="p">::</span><span class="n">Sat</span><span class="p">;</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Amount</span><span class="p">::</span><span class="n">from</span><span class="p">(</span><span class="mi">10</span><span class="p">);</span>
+
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">localstore</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">WalletMemoryDatabase</span><span class="p">::</span><span class="n">default</span><span class="p">();</span>
+
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">wallet</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Wallet</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="n">mint_url</span><span class="p">,</span><span class="w"> </span><span class="n">unit</span><span class="p">,</span><span class="w"> </span><span class="n">Arc</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="n">localstore</span><span class="p">),</span><span class="w"> </span><span class="o">&amp;</span><span class="n">seed</span><span class="p">);</span>
+
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">quote</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">wallet</span><span class="p">.</span><span class="n">mint_quote</span><span class="p">(</span><span class="n">amount</span><span class="p">).</span><span class="k">await</span><span class="p">.</span><span class="n">unwrap</span><span class="p">();</span>
+
+<span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Pay request: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">quote</span><span class="p">.</span><span class="n">request</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">loop</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">wallet</span><span class="p">.</span><span class="n">mint_quote_state</span><span class="p">(</span><span class="o">&amp;</span><span class="n">quote</span><span class="p">.</span><span class="n">id</span><span class="p">).</span><span class="k">await</span><span class="p">.</span><span class="n">unwrap</span><span class="p">();</span>
+
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="n">status</span><span class="p">.</span><span class="n">state</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">MintQuoteState</span><span class="p">::</span><span class="n">Paid</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">break</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Quote state: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">status</span><span class="p">.</span><span class="n">state</span><span class="p">);</span>
+
+<span class="w">        </span><span class="n">sleep</span><span class="p">(</span><span class="n">Duration</span><span class="p">::</span><span class="n">from_secs</span><span class="p">(</span><span class="mi">5</span><span class="p">)).</span><span class="k">await</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">receive_amount</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">wallet</span>
+<span class="w">        </span><span class="p">.</span><span class="n">mint</span><span class="p">(</span><span class="o">&amp;</span><span class="n">quote</span><span class="p">.</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">SplitTarget</span><span class="p">::</span><span class="n">default</span><span class="p">(),</span><span class="w"> </span><span class="nb">None</span><span class="p">)</span>
+<span class="w">        </span><span class="p">.</span><span class="k">await</span>
+<span class="w">        </span><span class="p">.</span><span class="n">unwrap</span><span class="p">();</span>
+
+<span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Minted {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">receive_amount</span><span class="p">);</span>
+
+<span class="p">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
 
 
 
